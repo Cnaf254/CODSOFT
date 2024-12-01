@@ -47,4 +47,55 @@ return res
 .json({ msg: "something went wrong try again later" });
 }
 }
-module.exports = register
+async function logIn(req,res){
+const {email, password} = req.body
+if(!email || !password){
+    return res
+    .status(StatusCodes.BAD_REQUEST)
+    .json({ msg: "Please enter all required inputs" });
+}
+try {
+const [user] = await dbConnection.query(
+    "SELECT username,password_hash,id FROM users WHERE email=?",[email]
+);
+if (user.length == 0) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({ msg: "invalid credential" });
+  }
+ //compare password
+ const isMatch = await bcrypt.compare(password, user[0].password_hash);
+ if (!isMatch) {
+   return res
+     .status(StatusCodes.BAD_REQUEST)
+     .json({ msg: "invalid credential" });
+ } 
+ //jwt generation
+ const username = user[0].username;
+ 
+ const userid = user[0].id;
+ 
+ const token = jwt.sign({ username, userid }, process.env.JWT_SECRET, {
+   expiresIn: "1d",
+ });
+ return res
+   .status(StatusCodes.OK)
+   .json({
+     msg: "user successfuly log in ",
+     token: token,
+     userName: username,
+     userid,
+   });
+} catch(error){
+    console.log(error);
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ msg: "something went wrong try again later" });
+}
+}
+function checkUser(req, res) {
+    const { userid, username } = req.user;
+  
+    res.status(StatusCodes.OK).json({ username, userid });
+  }
+module.exports = {register, logIn, checkUser};
