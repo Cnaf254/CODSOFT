@@ -1,32 +1,28 @@
-const express = require('express')
-const app = express()
-const cors = require('cors')
-require('dotenv').config()
+const express = require("express");
+const app = express();
+const cors = require("cors");
+require("dotenv").config();
+const userRouter = require("./routes/userRoutes.js");
 
-port = 3003
+const port = 3003;
 
-// const corsOptions = {
-//     origin: "https://your-frontend-domain.com", // Replace with your frontend URL
-//     methods: ["GET", "POST", "PUT", "DELETE"],
-//     allowedHeaders: ["Content-Type", "Authorization"],
-//   };
-//   app.use(cors(corsOptions));
-app.use(cors)
+app.use(cors());
+app.use(express.json());
 
-const dbConnection = require('./db/dbConfig.js')
-
-app.use(express.json())
+app.use("/api/users", userRouter);
+const dbConnection = require("./db/dbConfig.js");
 
 
-async function start(){
-    try{
-        const result = await dbConnection.execute("select 'test' ")
-    console.log(result)
 
-    await app.listen(port)
-    console.log(`listening ${port}`)
-    } catch(error) {
-         console.log(error)
-    }
+async function start() {
+  try {
+    const result = await dbConnection.execute("select 'test' ");
+    console.log(result);
+
+    await app.listen(port);
+    console.log(`listening ${port}`);
+  } catch (error) {
+    console.log(error);
+  }
 }
-start()
+start();
