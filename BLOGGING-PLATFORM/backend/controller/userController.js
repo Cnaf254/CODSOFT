@@ -27,7 +27,7 @@ async function register(req,res){
 
 try{
  const [user] = await dbConnection.query(
-    "SELECT username,id FROM users WHERE username=? or email=?", [username, email]
+    "SELECT username,user_id FROM users WHERE username=? or email=?", [username, email]
 
  );
 if (user.length > 0){
@@ -56,7 +56,7 @@ if(!email || !password){
 }
 try {
 const [user] = await dbConnection.query(
-    "SELECT username,password_hash,id FROM users WHERE email=?",[email]
+    "SELECT username,password_hash,user_id FROM users WHERE email=?",[email]
 );
 if (user.length == 0) {
     return res
@@ -73,7 +73,7 @@ if (user.length == 0) {
  //jwt generation
  const username = user[0].username;
  
- const userid = user[0].id;
+ const userid = user[0].user_id;
  
  const token = jwt.sign({ username, userid }, process.env.JWT_SECRET, {
    expiresIn: "1d",
@@ -98,4 +98,48 @@ function checkUser(req, res) {
   
     res.status(StatusCodes.OK).json({ username, userid });
   }
-module.exports = {register, logIn, checkUser};
+ 
+
+// Update password endpoint
+async function updatePassword(req, res) {
+    const { currentPassword, newPassword } = req.body;
+    const { userid, username } = req.user; // Extract user ID from the JWT token (using middleware)
+    console.log(userid)
+
+    if (!currentPassword || !newPassword) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ msg: 'Please provide both current and new password' });
+    }
+
+    try {
+        // Find the user by ID
+        const query = 'SELECT * FROM users WHERE user_id = ?';
+        const [user] = await dbConnection.query(query, [userid]);
+        
+
+        if (!user) {
+            return res.status(StatusCodes.NOT_FOUND).json({ msg: 'User not found' });
+        }
+
+        // Check if current password matches the stored password
+        const isMatch = await bcrypt.compare(currentPassword, user[0].password_hash); // Compare with stored hashed password
+        if (!isMatch) {
+            return res.status(StatusCodes.UNAUTHORIZED).json({ msg: 'Incorrect current password' });
+        }
+
+        // Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update the password in the database
+        await dbConnection.query('UPDATE users SET password_hash = ? WHERE user_id = ?', [hashedNewPassword, userid]);
+
+        return res.status(StatusCodes.OK).json({ msg: 'Password updated successfully' });
+    } catch (error) {
+        console.log(error);
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ msg: 'Something went wrong. Please try again later.' });
+    }
+}
+
+
+
+module.exports = {register, logIn, checkUser, updatePassword};
