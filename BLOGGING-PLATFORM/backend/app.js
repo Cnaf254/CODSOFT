@@ -3,6 +3,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 require("dotenv").config();
+const path = require('path');
 //import files
 const userRouter = require("./routes/userRoutes.js");
 const postRouter = require('./routes/postRoutes.js')
@@ -21,8 +22,10 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/users", userRouter);
-app.use("/api/posts",authMiddleware, postRouter);
-app.use("/api/comments",authMiddleware, commentRouter);
+app.use("/api/posts",postRouter);
+app.use("/api/comments",commentRouter);
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 async function start() {
   try {

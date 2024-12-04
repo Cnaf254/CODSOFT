@@ -1,22 +1,12 @@
 const dbConnection = require('../db/dbConfig');
 const StatusCodes = require('http-status-codes');
 const multer = require('multer');
-const path = require('path');
 
-// Configure Multer for Local Storage
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads'); // Save files in the 'uploads' directory
-    },
-    filename: (req, file, cb) => {
-        const uniqueName = `${Date.now()}-${file.originalname}`;
-        cb(null, uniqueName);
-    }
-});
-
+// Configure Multer for Memory Storage
+const storage = multer.memoryStorage(); // Store files in memory as a buffer
 const upload = multer({ storage });
 
-// Post Function
+// Post Function to save data
 async function post(req, res) {
     const { user_id, title, content, category, status, views } = req.body;
 
@@ -26,17 +16,29 @@ async function post(req, res) {
             .json({ msg: "Please provide all required fields" });
     }
 
-    let img_url = null;
+    let fileBuffer = null;
+    let fileName = null;
 
     // Check if a file is uploaded
     if (req.file) {
-        img_url = `/uploads/${req.file.filename}`; // Save relative path to the file
+        fileBuffer = req.file.buffer; // Get the file buffer from Multer
+        fileName = req.file.originalname; // Save the original file name for reference
     }
 
     try {
+        // Insert data into the database
         await dbConnection.query(
-            "INSERT INTO posts(user_id, title, content, image_url, category, status, views) VALUES(?, ?, ?, ?, ?, ?, ?)",
-            [user_id, title, content, img_url, category, status || 'draft', views || 0]
+            "INSERT INTO posts(user_id, title, content, image_file, image_name, category, status, views) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                user_id,
+                title,
+                content,
+                fileBuffer,
+                fileName,
+                category,
+                status || 'draft',
+                views || 0,
+            ]
         );
         return res.status(StatusCodes.CREATED).json({ msg: "Posted successfully" });
     } catch (error) {
@@ -50,9 +52,22 @@ async function post(req, res) {
 // Fetch All Posts
 async function allPosts(req, res) {
     try {
-        const query = "SELECT title, content, image_url FROM posts;";
+        const query = `
+        SELECT posts.*, users.username 
+        FROM posts
+        JOIN users ON posts.user_id = users.user_id;
+    `;
         const [result] = await dbConnection.query(query);
-        return res.status(StatusCodes.OK).json({ data: result });
+
+        // Convert binary files to base64 URLs for display (if needed)
+        const postsWithFileData = result.map(post => ({
+            ...post,
+            image_file: post.image_file
+                ? `data:image/jpeg;base64,${post.image_file.toString('base64')}`
+                : null, // Convert binary data to base64 string for use in HTML
+        }));
+
+        return res.status(StatusCodes.OK).json({ data: postsWithFileData });
     } catch (error) {
         console.error("Fetching error:", error);
         return res
@@ -61,8 +76,56 @@ async function allPosts(req, res) {
     }
 }
 
+async function popularPost(req,res) {
+    try {
+      const query = `SELECT post_id, title, content, image_file, image_name, category, status, created_at, views
+                     FROM posts ORDER BY views DESC LIMIT 1`; // Order by views in descending order and limit to 1 post
+  
+      // Execute the query
+      const [posts] = await dbConnection.query(query);
+      const postsWithFileData = posts.map(post => ({
+        ...post,
+        image_file: post.image_file
+            ? `data:image/jpeg;base64,${post.image_file.toString('base64')}`
+            : null, // Convert binary data to base64 string for use in HTML
+    }));
+      return res.status(StatusCodes.OK).json({ data: postsWithFileData });
+  
+      
+  
+      
+    } catch (error) {
+      console.error(error);
+      
+    }
+  }
+
+  async function category(req,res) {
+    try {
+        const query = `SELECT category, COUNT(*) as category_count
+        FROM posts
+        GROUP BY category
+        ORDER BY category_count DESC`; // Order by the number of posts in each category
+
+  
+      // Execute the query
+      const [posts] = await dbConnection.query(query);
+      console.log(posts)
+     
+      return res.status(StatusCodes.OK).json({ data: posts });
+  
+      
+  
+      
+    } catch (error) {
+      console.error(error);
+      
+    }
+  }
+
+// Search Posts
 async function searchPosts(req, res) {
-    const { searchTerm } = req.query;  // Get the search term from query parameters
+    const { searchTerm } = req.query; // Get the search term from query parameters
 
     if (!searchTerm) {
         return res.status(StatusCodes.BAD_REQUEST).json({ msg: 'Please provide a search term' });
@@ -70,20 +133,29 @@ async function searchPosts(req, res) {
 
     try {
         // SQL query to search for the term in title, content, and category
-        const query = `
-            SELECT post_id, title, content, image_url, category, status, created_at
-            FROM posts
-            WHERE title LIKE ? OR content LIKE ? OR category LIKE ?
-        `;
-        const searchPattern = `%${searchTerm}%`;  // Surround the search term with % for partial matching
+        const query = `SELECT post_id, title, content, image_file, image_name, category, status, created_at
+                       FROM posts WHERE title LIKE ? OR content LIKE ? OR category LIKE ?`;
+        const searchPattern = `%${searchTerm}%`; // Surround the search term with % for partial matching
 
-        const [posts] = await dbConnection.query(query, [searchPattern, searchPattern, searchPattern]);
+        const [posts] = await dbConnection.query(query, [
+            searchPattern,
+            searchPattern,
+            searchPattern,
+        ]);
 
         if (posts.length === 0) {
             return res.status(StatusCodes.NOT_FOUND).json({ msg: 'No posts found matching the search term' });
         }
 
-        return res.status(StatusCodes.OK).json({ data: posts });
+        // Convert binary files to base64 URLs for display (if needed)
+        const postsWithFileData = posts.map(post => ({
+            ...post,
+            image_file: post.image_file
+                ? `data:image/jpeg;base64,${post.image_file.toString('base64')}`
+                : null, // Convert binary data to base64 string for use in HTML
+        }));
+
+        return res.status(StatusCodes.OK).json({ data: postsWithFileData });
     } catch (error) {
         console.error(error);
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ msg: 'Something went wrong, please try again later' });
@@ -94,4 +166,6 @@ module.exports = {
     post: [upload.single('file'), post], // Use Multer middleware for file uploads
     allPosts,
     searchPosts,
+    popularPost,
+    category,
 };
