@@ -19,7 +19,7 @@ async function handleLogIn(e){
         console.log(error)
 
     }
-    console.log("gezu")
+    
 } 
 
   return (
