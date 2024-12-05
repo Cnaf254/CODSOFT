@@ -6,7 +6,7 @@ import './App.css'
 import Header from './components/Header/Header'
 import Home from './components/Home/Home';
 import Post from './components/Post/Post'
-import SignUp from './components/SignUp/SignUp'
+import Landing from './components/Landing/Landing'
 
 
 
@@ -18,7 +18,7 @@ function App() {
     <div class="flex">
    <Header/>
    <Routes>
-    <Route path="/" element={<SignUp />} />
+    <Route path="/" element={<Landing />} />
     <Route path="/home"
 element={<Home/>} /> 
 <Route path="/post" element={<Post/>} />
