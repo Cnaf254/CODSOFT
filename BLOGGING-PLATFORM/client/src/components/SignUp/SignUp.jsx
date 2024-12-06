@@ -2,12 +2,13 @@ import {useState} from 'react'
 import axios from "../axios"
 
 
-function SignUp() {
-    const [username, setUsername] = useState("");
+
+function SignUp({toggleComponent}) {
+
+const [username, setUsername] = useState("");
 const [email, setEmail] = useState("");
 const [password, setPassword] = useState("");
-// const [error, setError] = useState(""); 
-// const [submitted, setSubmitted] = useState(false);
+
     async function handleSignUp(e){
         e.preventDefault()
         try{
@@ -17,6 +18,8 @@ const [password, setPassword] = useState("");
                 password,
             })
             alert("user succeessfully registered")
+            window.location.reload();
+            
         } catch (error){
             alert("something went wrong")
             console.log(error)
@@ -75,9 +78,8 @@ const [password, setPassword] = useState("");
           
           {/* Login Link */}
           <div className="text-center mt-4">
-            <span className="text-sm text-blue-500 hover:underline cursor-pointer">
-              If you have an account, <a href="/login">login here</a>
-            </span>
+            
+            <p class="text-orange-700">If you have an account, <span class="hover:text-orange-500 cursor-pointer" onClick={toggleComponent}>login here</span></p>
           </div>
         </form>
       </div>

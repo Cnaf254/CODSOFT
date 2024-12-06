@@ -1,6 +1,9 @@
 import React,{useState} from 'react'
+import { useNavigate } from 'react-router-dom';
+import axios from '../axios'
 
-function LogIn() {
+function LogIn({toggleComponent}) {
+  const navigate = useNavigate()
 
 const [email, setEmail] = useState("");
 const [password, setPassword] = useState("");
@@ -8,12 +11,15 @@ const [password, setPassword] = useState("");
 async function handleLogIn(e){
     e.preventDefault()
     try{
-        await axios.post("/users/login",{
-            
+        const result= await axios.post("/users/login",{
             email,
             password,
         })
+        const token= result.data.token;
+        console.log(token)
+        localStorage.setItem('token',token)
         alert("user succeessfully registered")
+        navigate('/home')
     } catch (error){
         alert("something went wrong")
         console.log(error)
@@ -59,14 +65,13 @@ async function handleLogIn(e){
             type="submit"
             className="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            Sign Up
+            LogIn
           </button>
           
           {/* Login Link */}
           <div className="text-center mt-4">
-            <span className="text-sm text-blue-500 hover:underline cursor-pointer">
-              If you have not an account, <a href="/signup">register here</a>
-            </span>
+            
+            <p class="text-orange-700"> If you have not an account,<span class=" hover:text-orange-500 cursor-pointer" onClick={toggleComponent}>register here</span></p>
           </div>
         </form>
       </div>

@@ -5,8 +5,10 @@ import SignUp from "../SignUp/SignUp";
 import LogIn from "../LogIn/LogIn";
 
 function Landing() {
-  // const [login,setLogin] =useState(False)
-  
+   const [currentComponent,setCurrentComponent] =useState("login")
+    const toggleComponent =()=>{
+      setCurrentComponent(currentComponent=== "login"?"register":"login") 
+    }
   return (
     <div
       className="min-h-screen bg-cover bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 w-full gap-10"
@@ -21,7 +23,9 @@ function Landing() {
           Share anything you want and connect with others!
         </p>
       </div>
-      {<LogIn/>}
+      {
+        currentComponent === "login"?(<LogIn toggleComponent={toggleComponent}/>):(<SignUp toggleComponent={toggleComponent}/>)
+      }
 
       
     </div>

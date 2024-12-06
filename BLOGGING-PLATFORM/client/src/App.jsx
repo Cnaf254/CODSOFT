@@ -7,6 +7,8 @@ import Header from './components/Header/Header'
 import Home from './components/Home/Home';
 import Post from './components/Post/Post'
 import Landing from './components/Landing/Landing'
+import MyProfile from './components/MyProfile/MyProfile';
+import BlogDetail from './components/BlogDetail/BlogDetail';
 
 
 
@@ -14,20 +16,19 @@ function App() {
   const [count, setCount] = useState(0)
 
   return (
-   <Router>
-    <div class="flex">
-   <Header/>
-   <Routes>
-    <Route path="/" element={<Landing />} />
-    <Route path="/home"
-element={<Home/>} /> 
+<Router>
+<div class="flex">
+<Header/>
+<Routes>
+<Route path="/" element={<Landing />} />
+<Route path="/home" element={<Home/>} /> 
 <Route path="/post" element={<Post/>} />
+<Route path="/myprofile" element={<MyProfile/>} />
+<Route path="/blogdetail" element={<BlogDetail/>} />
+</Routes>
 
- </Routes>
-  
-   
-   </div>
-   </Router>
+</div>
+</Router>
     )
 }
 
