@@ -23,6 +23,7 @@ async function handleLogIn(e){
         setUser({
           userName:result.data.userName,
           userId:result.data.userid,
+          email:result.data.email,
         })
         
         navigate('/home')

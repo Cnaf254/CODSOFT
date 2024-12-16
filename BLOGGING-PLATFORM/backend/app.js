@@ -22,8 +22,8 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/users", userRouter);
-app.use("/api/posts",postRouter);
-app.use("/api/comments",commentRouter);
+app.use("/api/posts",authMiddleware,postRouter);
+app.use("/api/comments",authMiddleware,commentRouter);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

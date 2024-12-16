@@ -25,6 +25,28 @@ async function comment(req, res) {
     }
 }
 
+async function comment(req, res) {
+    const { post_id, user_id, content } = req.body;
+
+    // Check if all required fields are provided
+    if (!post_id || !user_id || !content) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ msg: 'Please provide post_id, user_id, and content' });
+    }
+
+    try {
+        // Insert the comment into the database
+        const result = await dbConnection.query(
+            "INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)",
+            [post_id, user_id, content]
+        );
+
+        // Send a success response
+        return res.status(StatusCodes.CREATED).json({ msg: 'Comment added successfully' });
+    } catch (error) {
+        console.error("Error adding comment: ", error);
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ msg: 'Something went wrong, try again later' });
+    }
+}
 // Function to retrieve all comments for a specific post
 async function allComments(req, res) {
     const { post_id } = req.query;

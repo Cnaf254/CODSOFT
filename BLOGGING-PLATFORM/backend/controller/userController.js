@@ -5,11 +5,7 @@ const jwt = require('jsonwebtoken')
 
 
 
-// Password validation function
-function validatePassword(password) {
-    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    return regex.test(password);
-}
+
 
 async function register(req,res){
 
@@ -18,12 +14,11 @@ async function register(req,res){
         return res.status(StatusCodes.BAD_REQUEST).json({msg: "please provide all value"});
     }
 
-     //Validate password strength
-     if (!validatePassword(password)) {
-        return res.status(400).json({
-            error: "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one digit, and one special character.",
-        });
-    }
+     //Validate password length
+     if(password.length < 8){
+        return res.status(StatusCodes.BAD_REQUEST).json({msg: "minimum length of password should be 8"});
+     }
+   
 
 try{
  const [user] = await dbConnection.query(
@@ -140,6 +135,22 @@ async function updatePassword(req, res) {
     }
 }
 
+const updateUserName = async (req, res) => {
+    const { user_id, user_name } = req.body;
+  
+    if (!user_id || !user_name) {
+      return res.status(400).json({ msg: "User ID and new username are required." });
+    }
+  
+    try {
+      const query = "UPDATE users SET username = ? WHERE user_id = ?";
+      await dbConnection.query(query, [user_name, user_id]);
+      return res.status(200).json({ userName: user_name });
+    } catch (error) {
+      console.error("Error updating username:", error);
+      return res.status(500).json({ msg: "Something went wrong." });
+    }
+  };
+  
 
-
-module.exports = {register, logIn, checkUser, updatePassword};
+module.exports = {register, logIn, checkUser, updatePassword,updateUserName};
