@@ -1,14 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import axios from "../axios";
+import bgimage from "../../assets/images/postbg.webp"
+import { userProvider } from "../../Context/UserProvider";
 
 function Post() {
-  const [userId, setUserId] = useState("");
+  const [user, setUser] = useContext(userProvider)
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState(null); // Store file object
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
   const [views, setViews] = useState(0);
+  const token = localStorage.getItem('token')
+  const userId =user.userId
 
   async function postBlog(e) {
     e.preventDefault();
@@ -25,7 +29,8 @@ function Post() {
     try {
       await axios.post("/posts/post", formData, {
         headers: {
-          "Content-Type": "multipart/form-data", // Required for file upload
+          "Content-Type": "multipart/form-data",
+          Authorization:`Bearer ${token}` // Required for file upload
         },
       });
       alert("Post submitted successfully!");
@@ -36,7 +41,7 @@ function Post() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-40 sm:px-6 lg:px-8 w-full" >
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-40 sm:px-6 lg:px-8 w-full" style={{ backgroundImage: `url(${bgimage})` }}>
       <div className="max-w-md w-full space-y-8">
         <h2 className="text-center text-3xl font-extrabold text-gray-900">
           Create a New Post
@@ -45,14 +50,7 @@ function Post() {
           onSubmit={postBlog}
           className="bg-white p-6 shadow-lg rounded-lg space-y-4"
         >
-          <input
-            type="text"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            placeholder="User ID"
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
+         
           <input
             type="text"
             value={title}

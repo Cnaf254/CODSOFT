@@ -1,9 +1,11 @@
-import React,{useState} from 'react'
-import { useNavigate } from 'react-router-dom';
+import React,{useState, useContext} from 'react'
+import { useNavigate, Link } from 'react-router-dom';
 import axios from '../axios'
+import { userProvider } from '../../Context/UserProvider';
 
 function LogIn({toggleComponent}) {
-  const navigate = useNavigate()
+const navigate = useNavigate()
+const [user, setUser] = useContext(userProvider)
 
 const [email, setEmail] = useState("");
 const [password, setPassword] = useState("");
@@ -16,13 +18,24 @@ async function handleLogIn(e){
             password,
         })
         const token= result.data.token;
-        console.log(token)
         localStorage.setItem('token',token)
-        alert("user succeessfully registered")
+        
+        setUser({
+          userName:result.data.userName,
+          userId:result.data.userid,
+        })
+        
         navigate('/home')
     } catch (error){
-        alert("something went wrong")
-        console.log(error)
+      if (error.response && error.response.status === 400) {
+        // Handle the "invalid credential" error here
+        alert("Invalid credentials. Please check your email and password.");
+
+        // You can set this error message to display in your UI or perform any other actions
+      } else {
+        console.log("Something went wrong:", error.message);
+        // Handle other error scenarios if needed
+      }
 
     }
     
