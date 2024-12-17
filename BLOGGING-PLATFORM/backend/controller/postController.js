@@ -8,7 +8,7 @@ const upload = multer({ storage });
 
 // Post Function to save data
 async function post(req, res) {
-    const { user_id, title, content, category, status, views } = req.body;
+    const { user_id, title, content, category } = req.body;
 
     if (!user_id || !title || !content) {
         return res
@@ -36,8 +36,8 @@ async function post(req, res) {
                 fileBuffer,
                 fileName,
                 category,
-                status || 'draft',
-                views || 0,
+                'published',
+                0,
             ]
         );
         return res.status(StatusCodes.CREATED).json({ msg: "Posted successfully" });
@@ -55,7 +55,8 @@ async function allPosts(req, res) {
         const query = `
         SELECT posts.*, users.username 
         FROM posts
-        JOIN users ON posts.user_id = users.user_id;
+        JOIN users ON posts.user_id = users.user_id
+        ORDER BY created_at DESC;
     `;
         const [result] = await dbConnection.query(query);
 
@@ -236,7 +237,8 @@ async function userPosts(req, res) {
         SELECT posts.*, users.username 
         FROM posts
         JOIN users ON posts.user_id = users.user_id
-        WHERE posts.user_id=?;
+        WHERE posts.user_id=?
+        ORDER BY created_at DESC;
         `;
         const [result] = await dbConnection.query(query, [userId]);
 
@@ -279,31 +281,42 @@ const deletePost = async (req, res) => {
 
 const updatePost = async (req, res) => {
     const { post_id, title, content } = req.body;
-  
+
     if (!post_id || (!title && !content)) {
-      return res.status(400).json({ msg: "Post ID and at least one field to update are required." });
+        return res.status(400).json({ msg: "Post ID and at least one field to update are required." });
     }
-  
+
     try {
-      const query = `
-        UPDATE posts
-        SET title = COALESCE(?, title),
-            content = COALESCE(?, content)
-        WHERE post_id = ?
-      `;
-      const [result] = await dbConnection.query(query, [title, content, post_id]);
-  
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ msg: "Post not found." });
-      }
-  
-      const [updatedPost] = await dbConnection.query("SELECT * FROM posts WHERE post_id = ?", [post_id]);
-      return res.status(200).json(updatedPost[0]);
+        const query = `
+            UPDATE posts
+            SET title = COALESCE(?, title),
+                content = COALESCE(?, content)
+            WHERE post_id = ?
+        `;
+        const [result] = await dbConnection.query(query, [title, content, post_id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ msg: "Post not found." });
+        }
+
+        // Fetch the updated post, including the image_file column
+        const [postsWithFileData] = await dbConnection.query("SELECT * FROM posts WHERE post_id = ?", [post_id]);
+
+        // Transform the post to include image data in Base64 format
+        const updatedPost= postsWithFileData.map(post => ({
+            ...post,
+            image_file: post.image_file
+                ? `data:image/jpeg;base64,${post.image_file.toString('base64')}`
+                : null, // Convert binary data to base64 string for use in HTML
+        }));
+
+        return res.status(200).json(updatedPost[0]);
     } catch (error) {
-      console.error("Error updating post:", error);
-      return res.status(500).json({ msg: "Something went wrong." });
+        console.error("Error updating post:", error);
+        return res.status(500).json({ msg: "Something went wrong." });
     }
-  };
+};
+
   
 
 

@@ -8,4 +8,5 @@ router.post('/register', register)
 router.post('/login', logIn)
 router.get('/check', authMiddleware, checkUser)
 router.put('/update', authMiddleware, updatePassword)
+router.put('/userupdate',authMiddleware,updateUserName)
 module.exports = router

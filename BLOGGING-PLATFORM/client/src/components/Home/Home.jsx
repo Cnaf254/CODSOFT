@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../axios";
 
 export default function Home() {
   const [posts, setPosts] = useState([]);
-  const [expandedPosts, setExpandedPosts] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [popularPosts, setPopularPosts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -12,56 +11,22 @@ export default function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchPosts() {
+    async function fetchData() {
       try {
-        const result = await axios.get("/posts/all_posts", {
-          headers: {
-            Authorization: "Bearer " + token,
-          },
-        });
-        setPosts(result.data.data);
+        const [postsRes, popularRes, categoriesRes] = await Promise.all([
+          axios.get("/posts/all_posts", { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get("/posts/popularPost", { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get("/posts/category", { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        setPosts(postsRes.data.data);
+        setPopularPosts(popularRes.data.data);
+        setCategories(categoriesRes.data.data);
       } catch (error) {
-        console.error(error.response.data.msg);
+        console.error(error.message);
       }
     }
-
-    async function getPopularPost() {
-      try {
-        const result = await axios.get("/posts/popularPost", {
-          headers: {
-            Authorization: "Bearer " + token,
-          },
-        });
-        setPopularPosts(result.data.data);
-      } catch (error) {
-        console.error(error.response.data.msg);
-      }
-    }
-
-    async function fetchCategory() {
-      try {
-        const result = await axios.get("/posts/category", {
-          headers: {
-            Authorization: "Bearer " + token,
-          },
-        });
-        setCategories(result.data.data);
-      } catch (error) {
-        console.error(error.response.data.msg);
-      }
-    }
-
-    fetchPosts();
-    getPopularPost();
-    fetchCategory();
-  }, []);
-
-  const handleReadMore = (index) => {
-    setExpandedPosts((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
-  };
+    fetchData();
+  }, [token]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -75,10 +40,8 @@ export default function Home() {
   const handleSearchSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.get(`/posts/search?searchTerm=${searchTerm}`,{
-        headers:{
-          Authorization:`Bearer ${token}`
-        }
+      const response = await axios.get(`/posts/search?searchTerm=${searchTerm}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
       setPosts(response.data.data);
     } catch (error) {
@@ -86,139 +49,125 @@ export default function Home() {
     }
   };
 
-  async function goToBlogDetail(post) {
+  const goToBlogDetail = async (post) => {
     try {
       await axios.post(
         "/posts/updateviews",
-        {
-          post_id: post.post_id,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { post_id: post.post_id },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       navigate("/blogdetail", { state: { postId: post.post_id } });
     } catch (error) {
       console.error("Error updating views:", error);
     }
-  }
+  };
 
   return (
-    <div className="text-white w-full bg-black flex flex-wrap py-4 px-4 lg:px-12">
-      {/* Main Content Area */}
-      <div className="w-full lg:w-3/4 flex flex-col py-4 px-4">
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {posts.map((post, index) => (
-            <div
-              key={index}
-              className="border border-gray-700 p-4 rounded-md bg-gray-900 text-sm cursor-pointer hover:shadow-lg transition"
-              onClick={() => goToBlogDetail(post)}
-            >
-              <img
-                src={post.image_file}
-                alt={post.image_name}
-                className="w-full h-48 object-cover rounded-md"
-              />
-              <h3 className="mt-2 font-semibold text-base">{post.title}</h3>
-              <div className="flex gap-2 text-xs text-white mt-1">
-                <div>{post.username}</div>
-                <div>{formatDate(post.created_at)}</div>
-                <div>{post.views} views</div>
-              </div>
-              <p className="text-gray-400 mt-2">
-                {expandedPosts[index]
-                  ? post.content
-                  : `${post.content.slice(0, 50)}...`}
-                {post.content.length > 50 && (
-                  <button
-                    className="text-blue-500 ml-1"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent click propagation
-                      handleReadMore(index);
-                    }}
-                  >
-                    {expandedPosts[index] ? "Read Less" : "Read More"}
-                  </button>
-                )}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Sidebar */}
-      <div className="w-full lg:w-1/4 bg-black p-4 rounded-md">
-        {/* Search Box */}
-        <div>
-          <form onSubmit={handleSearchSubmit} className="mb-4 flex items-center">
-            <input
-              type="text"
-              className="flex-1 p-2 rounded-md border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-              placeholder="Search posts..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-            />
-            <button
-              type="submit"
-              className="ml-2 bg-blue-600 text-black p-2 rounded-md"
-            >
-              Search
-            </button>
-          </form>
-        </div>
-
-        {/* Popular Posts */}
-        <div className="mb-6">
-          <h2 className="text-lg font-bold mb-4">Popular Posts</h2>
-          <ul>
-            {popularPosts.length > 0 ? (
-              popularPosts.map((post) => (
-                <li
-                  key={post.post_id}
-                  className="flex flex-col md:flex-row items-center gap-4 p-4 border border-gray-700 shadow-sm rounded-lg mb-4"
-                >
+    <div className="bg-gray-100 text-gray-800 min-h-screen py-8 px-4 lg:px-12">
+      {/* Main Content */}
+      <div className="flex flex-wrap lg:flex-nowrap">
+        {/* Posts Section */}
+        <div className="w-full lg:w-3/4 pr-0 lg:pr-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">Latest Posts</h1>
+          <div className="grid grid-cols-1 gap-6">
+            {posts.map((post, index) => (
+              <div
+                key={index}
+                className="bg-white border border-gray-300 rounded-lg shadow-lg p-4 cursor-pointer hover:shadow-xl transition"
+                onClick={() => goToBlogDetail(post)}
+              >
+                <div className="flex items-start">
+                  {/* Image section on the left */}
                   <img
                     src={post.image_file}
-                    alt={post.title || "Post Image"}
-                    className="w-40 h-40 object-cover rounded-md"
+                    alt={post.image_name}
+                    className="w-16 h-16 object-cover rounded-md mr-4"
                   />
-                  <div className="flex-1">
-                    <h3 className="text-md font-semibold mb-1">{post.title}</h3>
-                    <p className="text-sm text-gray-300 mb-1">
-                      Views: {post.views || 0}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {formatDate(post.created_at)}
-                    </p>
+                  <div className="flex flex-col w-full">
+                    {/* Title in bold */}
+                    <h3 className="text-xl font-bold text-gray-800">{post.title}</h3>
+                    {/* Author, Date, and Views in the same line */}
+                    <div className="flex items-center text-sm text-gray-600 mt-2">
+                      <span className="font-bold">{post.username}</span>
+                      <span className="mx-2">•</span>
+                      <span className="font-bold">{formatDate(post.created_at)}</span>
+                      <span className="mx-2">•</span>
+                      <span className="font-bold">{post.views} views</span>
+                    </div>
+                    {/* Post content */}
+                    <p className="text-gray-700 mt-2 text-sm">{post.content.slice(0, 100)}...</p>
                   </div>
-                </li>
-              ))
-            ) : (
-              <li className="text-gray-500">No popular posts available</li>
-            )}
-          </ul>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Categories */}
-        <div className="bg-gray-700 p-4 rounded-lg">
-          <h2 className="text-lg font-bold mb-2">Categories</h2>
-          <ul>
-            {categories.map((category, index) => (
-              <li
-                key={index}
-                className="mb-2 flex justify-between items-center p-2 border border-gray-500 rounded-md"
-              >
-                <span className="text-md font-medium">{category.category}</span>
-                <span className="text-sm text-gray-300 ml-auto">
-                  {category.category_count}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* Sidebar */}
+        <div className="w-full lg:w-1/4 mt-auto lg:mt-0">
+  {/* Search Box */}
+  <div className="mb-8">
+    <form onSubmit={handleSearchSubmit} className="flex items-center">
+      <input
+        type="text"
+        placeholder="Search posts..."
+        value={searchTerm}
+        onChange={handleSearchChange}
+        className="w-full p-3 border border-gray-300 rounded-l-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+      />
+      <button
+        type="submit"
+        className="px-6 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600 transition duration-300 ease-in-out transform hover:scale-105"
+      >
+        Search
+      </button>
+    </form>
+  </div>
+
+  {/* Popular Posts */}
+  <div className="mb-8">
+    <h2 className="text-xl font-semibold text-gray-900 mb-4">Popular Posts</h2>
+    <ul>
+      {popularPosts.map((post) => (
+        <li
+          key={post.post_id}
+          className="flex items-center gap-4 p-4 mb-4 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-lg transition"
+          onClick={() => goToBlogDetail(post)}
+        >
+          <img
+            src={post.image_file}
+            alt={post.title}
+            className="w-16 h-16 object-cover rounded-md"
+          />
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800">{post.title}</h3>
+            <p className="text-xs text-gray-600">
+              {formatDate(post.created_at)} • {post.views} views
+            </p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  {/* Categories */}
+  <div className="bg-white p-6 rounded-lg shadow-sm">
+    <h2 className="text-xl font-semibold text-gray-900 mb-4">Categories</h2>
+    <ul>
+      {categories.map((category, index) => (
+        <li
+          key={index}
+          className="flex justify-between items-center mb-3 p-3 border border-gray-300 rounded-md"
+        >
+          <span className="text-gray-800">{category.category}</span>
+          <span className="text-xs text-gray-500">{category.category_count}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</div>
+
+
       </div>
     </div>
   );
