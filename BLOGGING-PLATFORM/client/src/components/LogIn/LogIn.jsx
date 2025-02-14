@@ -1,22 +1,18 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../axios";
 import { userProvider } from "../../Context/UserProvider";
 
-function LogIn({handleRenderComponent}) {
+function LogIn({ handleRenderComponent }) {
   const navigate = useNavigate();
   const [user, setUser] = useContext(userProvider);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   async function handleLogIn(e) {
     e.preventDefault();
     try {
-      const result = await axios.post("/users/login", {
-        email,
-        password,
-      });
+      const result = await axios.post("/users/login", { email, password });
       const token = result.data.token;
       localStorage.setItem("token", token);
 
@@ -36,14 +32,56 @@ function LogIn({handleRenderComponent}) {
     }
   }
 
+  // Load Google Identity Services SDK
+  useEffect(() => {
+    const loadGoogleScript = () => {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+
+      script.onload = () => {
+        window.google.accounts.id.initialize({
+          client_id: "11811790768-bvok5gdff8e1kil3g45ae88g6599i9n5.apps.googleusercontent.com",
+          callback: handleGoogleSignIn,
+        });
+        window.google.accounts.id.renderButton(
+          document.getElementById("googleSignInBtn"),
+          { theme: "outline", size: "large" }
+        );
+      };
+    };
+    loadGoogleScript();
+  }, []);
+
+  // Handle Google Sign-In response
+  async function handleGoogleSignIn(response) {
+    const id_token = response.credential;
+    try {
+      const res = await axios.post("/auth/google", { token: id_token });
+      const { user, token } = res.data;
+
+      localStorage.setItem("token", token);
+      setUser({
+        userName: user.name,
+        userId: user.googleId,
+        email: user.email,
+      });
+
+      navigate("/home");
+    } catch (error) {
+      console.error("Google sign-in failed:", error);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
       <div className="max-w-md w-full space-y-8 bg-white rounded-md p-6 shadow-xl relative">
-        
-
         <h2 className="text-center text-3xl font-extrabold text-gray-900">
           Login to your account
         </h2>
+
         <form onSubmit={handleLogIn} className="space-y-4">
           <div>
             <input
@@ -72,20 +110,25 @@ function LogIn({handleRenderComponent}) {
           >
             Log In
           </button>
-
-          {/* Toggle to Sign Up */}
-          <div className="text-center mt-4">
-            <p className="text-gray-700">
-              Don’t have an account?{" "}
-              <span
-                className="text-blue-500 hover:text-blue-700 cursor-pointer"
-                onClick={() => handleRenderComponent("register")}
-              >
-                Register here
-              </span>
-            </p>
-          </div>
         </form>
+
+        {/* Google Login Button */}
+        <div className="flex justify-center mt-4">
+          <div id="googleSignInBtn"></div>
+        </div>
+
+        {/* Toggle to Sign Up */}
+        <div className="text-center mt-4">
+          <p className="text-gray-700">
+            Don’t have an account?{" "}
+            <span
+              className="text-blue-500 hover:text-blue-700 cursor-pointer"
+              onClick={() => handleRenderComponent("register")}
+            >
+              Register here
+            </span>
+          </p>
+        </div>
       </div>
     </div>
   );
